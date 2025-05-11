@@ -533,10 +533,23 @@ class TCtrl:
                 # Вставить из памяти
                 try:
                     mem_val = self.memory.value
-                    if self.expression and self.expression[-1] in "+-*/^":
-                        self.expression += " " + mem_val
-                    else:
-                        self.expression = mem_val
+                    if mem_val:
+                        # Получаем строковое представление числа
+                        if isinstance(mem_val, TPNumber):
+                            if self.current_base != 10:
+                                # Для не-десятичных систем конвертируем в текущую систему
+                                new_str = self._convert_to_base(int(mem_val.value), self.current_base)
+                            else:
+                                # Для десятичной системы показываем как есть
+                                new_str = str(mem_val.value)
+                        else:
+                            # Для дробей и комплексных чисел используем их метод to_string
+                            new_str = mem_val.to_string()
+                            
+                        if self.expression and self.expression[-1] in "+-*/^":
+                            self.expression += " " + new_str
+                        else:
+                            self.expression = new_str
                 except Exception as e:
                     print(f"Error retrieving from memory: {e}")
                 return self.expression
