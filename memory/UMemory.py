@@ -1,35 +1,26 @@
-from calc_numbers.TANumber import TANumber, TPNumber
+from calc_numbers.TANumber import TANumber
 
 class TMemory:
-    _ON = "On"
-    _OFF = "Off"
-
-    def __init__(self, number: TANumber = None):
-        if number is None:
-            number = TPNumber(0)
-        self.mem = number.copy()
-        self._state = self._OFF
-
-    def store(self, number: TANumber):
-        self.mem = number.copy()
-        self._state = self._ON
-
-    def take(self) -> TANumber:
-        self._state = self._ON
-        return self.mem.copy()
-
-    def add(self, number: TANumber):
-        self.mem = self.mem.add(number)
-        self._state = self._ON
-
+    """Память калькулятора"""
+    
+    def __init__(self):
+        self.value = None  # Значение в памяти
+        
+    def store(self, number):
+        """Сохранить число"""
+        self.value = number.copy()
+        
+    def add(self, number):
+        """Добавить число"""
+        if self.value:
+            self.value = self.value.add(number)
+        else:
+            self.value = number.copy()
+            
     def clear(self):
-        self.mem = TPNumber(0)
-        self._state = self._OFF
-
-    @property
-    def state(self) -> str:
-        return self._state
-
-    @property
-    def value(self) -> str:
-        return self.mem.to_string() 
+        """Очистить память"""
+        self.value = None
+        
+    def get(self):
+        """Получить число"""
+        return self.value.copy() if self.value else None 

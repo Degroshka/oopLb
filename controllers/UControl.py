@@ -2,7 +2,7 @@ from enum import Enum
 from editors.UAEditor import PEditor, FEditor, CEditor, AEditor
 from processor.UProcssr import TProc
 from memory.UMemory import TMemory
-from calc_numbers.TANumber import TANumber, TPNumber
+from calc_numbers.TANumber import TANumber, TPNumber, TFrac, TComp
 
 class TCtrlState(Enum):
     cStart = 0
@@ -140,6 +140,10 @@ class TCtrl:
 
     def set_base(self, base: int):
         """Установка системы счисления"""
+        if not isinstance(self.editor, PEditor):
+            raise ValueError("Только для P-чисел")
+        if base < 2 or base > 16:
+            raise ValueError("Основание от 2 до 16")
         self.current_base = base
         # Конвертируем текущее выражение в новую систему
         if self.expression:
@@ -172,8 +176,15 @@ class TCtrl:
                 if self.state == TCtrlState.cValDone:
                     self.expression = ""
                     self.state = TCtrlState.cEditing
+                # Убираем незначащие нули в начале числа
+                if self.expression == "0":
+                    self.expression = ""
+                elif self.expression and self.expression[-1] in "+-*/^":
+                    # Если последний символ - операция, добавляем пробел после неё
+                    self.expression += " "
                 self.expression += cmd.upper()
                 return self.expression
+
             # Точка доступна только в системах счисления с основанием больше 2
             elif cmd == "." and self.current_base > 2:
                 if self.state == TCtrlState.cValDone:
@@ -185,22 +196,62 @@ class TCtrl:
 
             # Операции
             elif cmd in "+-*/^":
+                # Если это дробный режим или комплексный режим и операция степени, игнорируем
+                if (isinstance(self.editor, (FEditor, CEditor)) and cmd == "^"):
+                    return self.expression
+
                 if self.expression:
-                    if self.first_number is None:
-                        self.first_number = self.expression
-                        self.last_operation = cmd
-                        self.expression += cmd
+                    # Если это дробный режим и вводится /, проверяем, что это не операция деления
+                    if isinstance(self.editor, FEditor) and cmd == "/":
+                        # Проверяем, что последний символ не является операцией
+                        if self.expression and self.expression[-1] not in "+-*/^":
+                            self.expression += cmd
+                            return self.expression
+                    
+                    # Если это дробный режим и вводится другая операция
+                    if isinstance(self.editor, FEditor) and cmd != "/":
+                        # Проверяем последнюю операцию
+                        last_op = None
+                        for op in "+-*/^":
+                            pos = self.expression.rfind(op)
+                            if pos > -1 and (last_op is None or pos > last_op[1]):
+                                last_op = (op, pos)
+                        
+                        # Если последней операции не было или это не деление, добавляем знаменатель
+                        if last_op is None or last_op[0] != "/":
+                            # Находим последнее число
+                            if last_op is None:
+                                last_number = self.expression.strip()
+                            else:
+                                last_number = self.expression[last_op[1] + 1:].strip()
+                            
+                            # Если число не является дробью, добавляем знаменатель
+                            if '/' not in last_number:
+                                try:
+                                    num = int(last_number)
+                                    if last_op is None:
+                                        self.expression = f"{num}/1"
+                                    else:
+                                        self.expression = self.expression[:last_op[1] + 1] + f" {num}/1"
+                                except ValueError:
+                                    pass
+                    
+                    # Если последний символ - операция, заменяем её
+                    if self.expression and self.expression[-1] in "+-*/^":
+                        self.expression = self.expression[:-1] + cmd
                     else:
-                        # Вычисляем предыдущую операцию
-                        result = self._evaluate_expression(self.first_number + self.expression)
-                        self.first_number = result
-                        self.last_operation = cmd
-                        self.expression = result + cmd
+                        # Добавляем пробел перед операцией
+                        if not self.expression.endswith(" "):
+                            self.expression += " "
+                        self.expression += cmd
                 return self.expression
 
             elif cmd == "AC":
                 self.expression = ""
+                self.first_number = None
+                self.last_operation = None
                 return self.expression
+
             elif cmd == "CE":
                 # Удаляем последнее введенное число
                 # Ищем последний оператор или начало строки
@@ -212,14 +263,177 @@ class TCtrl:
                 else:
                     self.expression = self.expression[:last_operator + 1]
                 return self.expression
+
             elif cmd == "BS":
-                self.expression = self.expression[:-1]
+                if self.expression:
+                    self.expression = self.expression[:-1]
                 return self.expression
+
+            elif cmd == "+/-":
+                if self.expression:
+                    try:
+                        # Получаем последнее число из выражения
+                        parts = self.expression.split()
+                        if not parts:
+                            return self.expression
+                            
+                        last_number = parts[-1]
+                        
+                        # Если последний символ - операция, ничего не делаем
+                        if last_number in "+-*/^":
+                            return self.expression
+
+                        # Если это комплексное число
+                        if isinstance(self.editor, CEditor):
+                            if 'i' in last_number:
+                                # Если есть вещественная часть
+                                if '+' in last_number or '-' in last_number[1:]:
+                                    real, imag = last_number.split('+') if '+' in last_number else last_number.split('-')
+                                    if '-' in last_number[1:]:
+                                        real = '-' + real
+                                    imag = imag.replace('i', '')
+                                    parts[-1] = f"-{real}-{imag}i" if not real.startswith('-') else f"{real[1:]}-{imag}i"
+                                else:
+                                    # Если только мнимая часть
+                                    imag = last_number.replace('i', '')
+                                    parts[-1] = f"-{imag}i" if not imag.startswith('-') else f"{imag[1:]}i"
+                                self.expression = " ".join(parts)
+                                return self.expression
+
+                        # Если это дробный режим и число не является дробью, преобразуем его
+                        if isinstance(self.editor, FEditor) and '/' not in last_number:
+                            try:
+                                num = int(last_number)
+                                last_number = f"{num}/1"
+                            except ValueError:
+                                pass
+                            
+                        # Если это дробь, меняем знак числителя
+                        if '/' in last_number:
+                            num, den = last_number.split('/')
+                            if num.startswith('-'):
+                                num = num[1:]
+                            else:
+                                num = '-' + num
+                            parts[-1] = f"{num}/{den}"
+                            self.expression = " ".join(parts)
+                        else:
+                            # Для обычных чисел
+                            if self.current_base != 10:
+                                dec_value = int(last_number, self.current_base)
+                            else:
+                                dec_value = float(last_number)
+                                
+                            # Меняем знак
+                            dec_value = -dec_value
+                            
+                            # Конвертируем обратно в текущую систему
+                            if self.current_base != 10:
+                                if dec_value.is_integer():
+                                    result_str = self._convert_to_base(int(dec_value), self.current_base)
+                                else:
+                                    result_str = str(dec_value)
+                            else:
+                                result_str = str(dec_value)
+                            
+                            # Заменяем последнее число на результат
+                            parts[-1] = result_str
+                            self.expression = " ".join(parts)
+                            
+                    except Exception as e:
+                        print(f"Error changing sign: {e}")
+                return self.expression
+
+            elif cmd == "1/x":
+                # Вычисление обратного числа
+                if self.expression:
+                    try:
+                        # Получаем последнее число из выражения
+                        parts = self.expression.split()
+                        last_number = parts[-1] if parts else "0"
+
+                        # Если это комплексное число
+                        if isinstance(self.editor, CEditor):
+                            if 'i' in last_number:
+                                # Для комплексных чисел используем TComp
+                                comp = TComp()
+                                comp.from_string(last_number)
+                                result = comp.inverse()
+                                parts[-1] = result.to_string()
+                                self.expression = " ".join(parts)
+                                return self.expression
+
+                        # Если это дробный режим и число не является дробью, преобразуем его
+                        if isinstance(self.editor, FEditor):
+                            if '/' not in last_number:
+                                try:
+                                    num = int(last_number)
+                                    last_number = f"{num}/1"
+                                except ValueError:
+                                    pass
+                            
+                            # Создаем дробь и вычисляем обратное число
+                            frac = TFrac()
+                            frac.from_string(last_number)
+                            result = frac.inverse()
+                            parts[-1] = result.to_string()
+                            self.expression = " ".join(parts)
+                            return self.expression
+                        else:
+                            # Для обычных чисел
+                            if self.current_base != 10:
+                                dec_value = int(last_number, self.current_base)
+                            else:
+                                dec_value = float(last_number)
+                                
+                            # Проверяем на ноль
+                            if dec_value == 0:
+                                raise ValueError("Division by zero")
+                                
+                            # Вычисляем обратное число
+                            inverse_value = 1.0 / dec_value
+                            
+                            # Конвертируем результат в текущую систему счисления
+                            if self.current_base != 10:
+                                # Для целых чисел
+                                if inverse_value.is_integer():
+                                    result_str = self._convert_to_base(int(inverse_value), self.current_base)
+                                else:
+                                    # Для дробных чисел показываем в десятичной системе
+                                    result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
+                            else:
+                                # Для десятичной системы также ограничиваем количество знаков
+                                result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
+                            
+                            # Заменяем последнее число на результат
+                            if parts:
+                                parts[-1] = result_str
+                                self.expression = " ".join(parts)
+                            else:
+                                self.expression = result_str
+                                
+                    except ValueError as ve:
+                        print(f"Error calculating inverse: {ve}")
+                        self.expression = "Error: Division by zero"
+                    except Exception as e:
+                        print(f"Error calculating inverse: {e}")
+                        self.expression = "Error"
+                return self.expression
+
             elif cmd == "=":
-                # Определяем тип редактора и вычисляем выражение соответствующим образом
                 try:
+                    if not self.expression:
+                        return "0"
+
+                    # Определяем тип редактора и вычисляем выражение соответствующим образом
                     if isinstance(self.editor, FEditor):
-                        result = self._eval_fraction_expression(self.expression)
+                        try:
+                            result = self._eval_fraction_expression(self.expression)
+                            self.expression = result
+                            return result
+                        except ValueError as e:
+                            self.expression = f"Error: {str(e)}"
+                            return self.expression
                     elif isinstance(self.editor, CEditor):
                         result = self._eval_complex_expression(self.expression)
                     else:
@@ -232,100 +446,311 @@ class TCtrl:
                             for c in expr:
                                 if c in "+-*/.^":
                                     if current:
-                                        parts.append(str(int(current, self.current_base)))
+                                        # Убираем незначащие нули и префиксы
+                                        current = current.lstrip('0bBxXoO') or '0'
+                                        try:
+                                            parts.append(str(int(current, self.current_base)))
+                                        except ValueError:
+                                            parts.append(current)
                                         current = ""
                                     parts.append(c)
                                 else:
                                     current += c
                             if current:
-                                parts.append(str(int(current, self.current_base)))
+                                # Убираем незначащие нули и префиксы
+                                current = current.lstrip('0bBxXoO') or '0'
+                                try:
+                                    parts.append(str(int(current, self.current_base)))
+                                except ValueError:
+                                    parts.append(current)
                             expr = ''.join(parts)
                         
                         result = str(eval(expr.replace('^', '**')))
                         
                         # Конвертируем результат обратно в текущую систему
                         if self.current_base != 10:
-                            dec_value = int(float(result))
-                            if self.current_base == 16:
-                                result = hex(dec_value)[2:].upper()
-                            elif self.current_base == 8:
-                                result = oct(dec_value)[2:]
-                            elif self.current_base == 2:
-                                result = bin(dec_value)[2:]
-                            else:
-                                digits = []
-                                n = dec_value
-                                while n:
-                                    digits.append("0123456789ABCDEF"[n % self.current_base])
-                                    n //= self.current_base
-                                result = ''.join(reversed(digits)) if digits else '0'
-                        
+                            try:
+                                dec_value = float(result)
+                                if dec_value.is_integer():
+                                    dec_value = int(dec_value)
+                                    if self.current_base == 16:
+                                        result = hex(dec_value)[2:].upper()
+                                    elif self.current_base == 8:
+                                        result = oct(dec_value)[2:]
+                                    elif self.current_base == 2:
+                                        result = bin(dec_value)[2:]
+                                    else:
+                                        digits = []
+                                        n = abs(dec_value)
+                                        while n:
+                                            digits.append("0123456789ABCDEF"[n % self.current_base])
+                                            n //= self.current_base
+                                        result = ''.join(reversed(digits)) if digits else '0'
+                                        if dec_value < 0:
+                                            result = '-' + result
+                                else:
+                                    # Для дробных чисел показываем в десятичной системе
+                                    # с ограничением количества знаков после запятой
+                                    result = f"{dec_value:.10f}".rstrip('0').rstrip('.')
+                            except ValueError:
+                                pass
+                    
                     self.expression = result
                     return result
-                except Exception:
+                except Exception as e:
                     self.expression = ""
                     return "Error"
+
             elif cmd == "MS":
                 # Запомнить текущее значение
-                self.memory.store(self._get_current_number())
+                if self.expression:
+                    try:
+                        # Получаем последнее число из выражения
+                        parts = self.expression.split()
+                        last_number = parts[-1] if parts else "0"
+                        
+                        # Создаем число соответствующего типа
+                        if isinstance(self.editor, FEditor):
+                            number = TFrac()
+                            number.from_string(last_number)
+                        elif isinstance(self.editor, CEditor):
+                            number = TComp()
+                            number.from_string(last_number)
+                        else:
+                            # Для P-чисел
+                            if self.current_base != 10:
+                                dec_value = int(last_number, self.current_base)
+                            else:
+                                dec_value = float(last_number)
+                            number = TPNumber(dec_value)
+                            
+                        self.memory.store(number)
+                    except Exception as e:
+                        print(f"Error storing in memory: {e}")
                 return self.expression
+
             elif cmd == "MR":
                 # Вставить из памяти
-                mem_val = self.memory.value
-                self.expression += mem_val
+                try:
+                    mem_val = self.memory.value
+                    if self.expression and self.expression[-1] in "+-*/^":
+                        self.expression += " " + mem_val
+                    else:
+                        self.expression = mem_val
+                except Exception as e:
+                    print(f"Error retrieving from memory: {e}")
                 return self.expression
+
             elif cmd == "MC":
                 self.memory.clear()
                 return self.expression
+
             elif cmd == "M+":
-                self.memory.add(self._get_current_number())
+                # Добавить к значению в памяти
+                if self.expression:
+                    try:
+                        # Получаем последнее число из выражения
+                        parts = self.expression.split()
+                        last_number = parts[-1] if parts else "0"
+                        
+                        # Создаем число соответствующего типа
+                        if isinstance(self.editor, FEditor):
+                            number = TFrac()
+                            number.from_string(last_number)
+                        elif isinstance(self.editor, CEditor):
+                            number = TComp()
+                            number.from_string(last_number)
+                        else:
+                            # Для P-чисел
+                            if self.current_base != 10:
+                                dec_value = int(last_number, self.current_base)
+                            else:
+                                dec_value = float(last_number)
+                            number = TPNumber(dec_value)
+                            
+                        self.memory.add(number)
+                    except Exception as e:
+                        print(f"Error adding to memory: {e}")
                 return self.expression
+
+            # Добавление мнимой единицы для комплексных чисел
+            elif cmd == "i" and isinstance(self.editor, CEditor):
+                if self.state == TCtrlState.cValDone:
+                    self.expression = ""
+                    self.state = TCtrlState.cEditing
+                if not self.expression.endswith("i"):
+                    self.expression += "i"
+                return self.expression
+
             else:
                 return self.expression
         except Exception as e:
             self.expression = ""
             return str(e)
 
+    def _convert_to_base(self, number: int, base: int) -> str:
+        """Конвертирует число в указанную систему счисления"""
+        if number == 0:
+            return "0"
+        digits = []
+        n = abs(number)
+        while n:
+            digits.append("0123456789ABCDEF"[n % base])
+            n //= base
+        result = ''.join(reversed(digits))
+        return "-" + result if number < 0 else result
+
     def _eval_fraction_expression(self, expr: str):
-        from calc_numbers.TANumber import TFrac
         import re
-        # Разбиваем выражение на слагаемые с учетом знаков
-        terms = re.findall(r'[+-]?\d+/\d+', expr.replace(' ', ''))
-        result = TFrac(0, 1)
-        for term in terms:
-            frac = TFrac()
-            frac.from_string(term)
-            result = result.add(frac)
-        return result.to_string()
+        
+        try:
+            # Разбиваем выражение на части (числа и операторы)
+            parts = []
+            current = ""
+            for c in expr:
+                if c in "+-*/^ ":
+                    if current:
+                        # Преобразуем число в дробь
+                        try:
+                            if "/" in current:
+                                # Если это уже дробь
+                                frac = TFrac()
+                                frac.from_string(current)
+                            else:
+                                # Если это целое число, добавляем знаменатель 1
+                                frac = TFrac(int(current), 1)
+                            parts.append(frac)
+                        except ValueError:
+                            parts.append(current)
+                        current = ""
+                    if c != " ":  # Пропускаем пробелы
+                        parts.append(c)
+                else:
+                    current += c
+            
+            # Обрабатываем последнее число
+            if current:
+                try:
+                    if "/" in current:
+                        frac = TFrac()
+                        frac.from_string(current)
+                    else:
+                        frac = TFrac(int(current), 1)
+                    parts.append(frac)
+                except ValueError:
+                    parts.append(current)
+            
+            # Вычисляем выражение
+            result = TFrac(0, 1)
+            current_op = None
+            
+            for part in parts:
+                if isinstance(part, TFrac):
+                    if current_op is None:
+                        result = part
+                    else:
+                        try:
+                            if current_op == "+":
+                                result = result.add(part)
+                            elif current_op == "-":
+                                result = result.subtract(part)
+                            elif current_op == "*":
+                                result = result.multiply(part)
+                            elif current_op == "/":
+                                result = result.divide(part)
+                            elif current_op == "^":
+                                # Для степени преобразуем степень в целое число
+                                try:
+                                    power = int(part.to_string().split('/')[0])
+                                    if power < 0:
+                                        raise ValueError("Power must be non-negative")
+                                    result = result.power(power)
+                                except (ValueError, IndexError):
+                                    raise ValueError("Power must be a non-negative integer")
+                        except Exception as e:
+                            raise ValueError(f"Error in operation {current_op}: {str(e)}")
+                elif part in "+-*/^":
+                    current_op = part
+            
+            return result.to_string()
+        except Exception as e:
+            raise ValueError(f"Error evaluating expression: {str(e)}")
 
     def _eval_complex_expression(self, expr: str):
-        from calc_numbers.TANumber import TComp
         import re
-        # Удаляем пробелы и нормализуем выражение
-        expr = expr.replace(' ', '').replace('+-', '-').replace('--', '+')
-        if expr and expr[0] not in '+-':
-            expr = '+' + expr
-        # Разбиваем на слагаемые вида [+|-]a[+|-]bi
-        terms = re.findall(r'([+-][0-9.]+(?:[+-][0-9.]+i)?)', expr)
+        
+        # Разбиваем выражение на части (числа и операторы)
+        parts = []
+        current = ""
+        for c in expr:
+            if c in "+-*/^ ":
+                if current:
+                    # Преобразуем в комплексное число
+                    try:
+                        if 'i' in current:
+                            # Если это уже комплексное число
+                            comp = TComp()
+                            comp.from_string(current)
+                        else:
+                            # Если это вещественное число
+                            comp = TComp(float(current), 0)
+                        parts.append(comp)
+                    except ValueError:
+                        parts.append(current)
+                    current = ""
+                if c != " ":  # Пропускаем пробелы
+                    parts.append(c)
+            else:
+                current += c
+        
+        # Обрабатываем последнее число
+        if current:
+            try:
+                if 'i' in current:
+                    comp = TComp()
+                    comp.from_string(current)
+                else:
+                    comp = TComp(float(current), 0)
+                parts.append(comp)
+            except ValueError:
+                parts.append(current)
+        
+        # Вычисляем выражение
         result = TComp(0, 0)
-        for term in terms:
-            comp = TComp()
-            # Убираем ведущий + для from_string
-            if term.startswith('+'):
-                term = term[1:]
-            comp.from_string(term)
-            result = result.add(comp)
+        current_op = None
+        
+        for part in parts:
+            if isinstance(part, TComp):
+                if current_op is None:
+                    result = part
+                else:
+                    if current_op == "+":
+                        result = result.add(part)
+                    elif current_op == "-":
+                        result = result.subtract(part)
+                    elif current_op == "*":
+                        result = result.multiply(part)
+                    elif current_op == "/":
+                        result = result.divide(part)
+                    elif current_op == "^":
+                        # Для степени преобразуем степень в целое число
+                        try:
+                            power = int(part.real)
+                            result = result.power(power)
+                        except (ValueError, AttributeError):
+                            raise ValueError("Power must be an integer")
+            elif part in "+-*/^":
+                current_op = part
+        
         return result.to_string()
 
     def _get_current_number(self):
         # Получить текущее число для памяти
         if isinstance(self.editor, FEditor):
-            from calc_numbers.TANumber import TFrac
             frac = TFrac()
             frac.from_string(self.expression)
             return frac
         elif isinstance(self.editor, CEditor):
-            from calc_numbers.TANumber import TComp
             comp = TComp()
             comp.from_string(self.expression)
             return comp
@@ -357,12 +782,10 @@ class TCtrl:
         if isinstance(self.editor, PEditor):
             return TPNumber(float(s))
         elif isinstance(self.editor, FEditor):
-            from calc_numbers.TANumber import TFrac
             frac = TFrac()
             frac.from_string(s)
             return frac
         elif isinstance(self.editor, CEditor):
-            from calc_numbers.TANumber import TComp
             comp = TComp()
             comp.from_string(s)
             return comp

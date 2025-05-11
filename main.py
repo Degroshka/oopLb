@@ -93,8 +93,40 @@ class CalculatorApp:
             self.update_number_buttons_state(self.base_var.get())
         else:
             self.base_frame.grid_remove()
-            # Включаем все кнопки для дробей и комплексных
-            self.update_number_buttons_state(16)
+            # Отключаем буквы A-F для дробей и комплексных чисел
+            for text, pos in self.number_buttons.items():
+                for widget in self.main_frame.grid_slaves(row=pos[0], column=pos[1]):
+                    if isinstance(widget, tk.Button):
+                        if text in "ABCDEF":
+                            widget.config(state="disabled")
+                            widget.config(bg='#cccccc')  # Делаем кнопку визуально неактивной
+                            widget.config(disabledforeground='#999999')  # Делаем текст серым
+                        elif text in "0123456789.":
+                            widget.config(state="normal")
+                            widget.config(bg='#e0e0e0')  # Возвращаем нормальный цвет
+                            widget.config(disabledforeground='black')  # Возвращаем нормальный цвет текста
+                        elif text == "i":
+                            # Активируем кнопку i только для комплексных чисел
+                            if self.number_type.get() == "C":
+                                widget.config(state="normal")
+                                widget.config(bg='#e0e0e0')
+                                widget.config(disabledforeground='black')
+                            else:
+                                widget.config(state="disabled")
+                                widget.config(bg='#cccccc')
+                                widget.config(disabledforeground='#999999')
+
+            # Отключаем кнопку степени для дробных и комплексных чисел
+            for text, pos in self.operation_buttons.items():
+                if text == '^':
+                    for widget in self.main_frame.grid_slaves(row=pos[0], column=pos[1]):
+                        if isinstance(widget, ttk.Button):
+                            if self.number_type.get() in ["F", "C"]:
+                                widget.config(state="disabled")
+                                widget.configure(style='Disabled.TButton')
+                            else:
+                                widget.config(state="normal")
+                                widget.configure(style='TButton')
     
     def create_buttons(self):
         """Create calculator buttons"""
@@ -106,7 +138,7 @@ class CalculatorApp:
         # Operation buttons
         self.operation_buttons = {
             "+": (5, 3), "-": (6, 3), "*": (7, 3), "/": (8, 3),
-            "^": (9, 3)
+            "^": (9, 3), "1/x": (10, 3)
         }
         
         # Number buttons (A-F и C как цифра)
@@ -116,12 +148,13 @@ class CalculatorApp:
             "1": (7, 0), "2": (7, 1), "3": (7, 2),
             "0": (8, 0), ".": (8, 1), "+/-": (8, 2),
             "A": (9, 0), "B": (9, 1), "C": (9, 2),
-            "D": (10, 0), "E": (10, 1), "F": (10, 2)
+            "D": (10, 0), "E": (10, 1), "F": (10, 2),
+            "i": (11, 0)  # Добавляем кнопку мнимой единицы
         }
         
         # Control buttons (AC для очистки всего поля, CE для удаления последнего числа)
         self.control_buttons = {
-            "AC": (9, 3), "CE": (10, 3), "BS": (8, 3), "=": (11, 3)
+            "AC": (11, 1), "CE": (11, 2), "BS": (11, 3), "=": (12, 3)
         }
     
     def create_memory_buttons(self):
@@ -137,7 +170,12 @@ class CalculatorApp:
             btn = ttk.Button(self.main_frame, text=text, 
                            command=lambda t=text: self.on_button_click(t))
             btn.grid(row=pos[0], column=pos[1], padx=2, pady=2, sticky='nsew')
-    
+            # Отключаем кнопку степени для дробных и комплексных чисел
+            if text == '^':
+                if self.number_type.get() in ["F", "C"]:
+                    btn.config(state="disabled")
+                    btn.configure(style='Disabled.TButton')
+
     def create_number_buttons(self):
         """Create number input buttons"""
         for text, pos in self.number_buttons.items():
@@ -177,18 +215,12 @@ class CalculatorApp:
             if command in "0123456789ABCDEF":
                 if not self.is_allowed_digit(command):
                     return
-                current = self.controller.get_display()
-                # Запрет незначащих нулей
-                if current == "0" and command == "0":
-                    return  # Не добавляем еще один ноль
-                if current == "0" and command != ".":
-                    self.controller.expression = ""  # Стираем ведущий ноль
                 self.controller.command(command)
                 self.update_display()
                 return
 
             # Если это операция или равно
-            if command in "+-*/^=":
+            if command in "+-*/^=" or command == "1/x":
                 self.controller.command(command)
                 self.update_display()
                 return
@@ -220,9 +252,6 @@ class CalculatorApp:
             if key in "ABCDEF":
                 if not self.is_allowed_digit(key):
                     return
-                current = self.controller.get_display()
-                if current == "0":
-                    self.controller.expression = ""
                 self.controller.command(key)
                 self.update_display()
                 return
@@ -231,11 +260,6 @@ class CalculatorApp:
             if key in "0123456789":
                 if not self.is_allowed_digit(key):
                     return
-                current = self.controller.get_display()
-                if current == "0" and key == "0":
-                    return
-                if current == "0" and key != ".":
-                    self.controller.expression = ""
                 self.controller.command(key)
                 self.update_display()
                 return
@@ -267,11 +291,6 @@ class CalculatorApp:
         if hasattr(self, "base_value_label"):
             self.base_value_label.config(text=str(base))
         
-        # Проверяем, существует ли number_buttons, если нет - создаем
-        if not hasattr(self, "number_buttons"):
-            self.create_buttons()
-            self.create_number_buttons()
-        
         # Обновляем состояние кнопок в зависимости от системы счисления
         allowed = "0123456789ABCDEF"[:base]
         for text, pos in self.number_buttons.items():
@@ -279,42 +298,122 @@ class CalculatorApp:
                 if isinstance(widget, tk.Button):
                     if text in allowed or not text.isalnum():
                         widget.config(state="normal")
+                        widget.config(bg='#e0e0e0')  # Возвращаем нормальный цвет
+                        widget.config(disabledforeground='black')  # Возвращаем нормальный цвет текста
                     else:
                         widget.config(state="disabled")
+                        widget.config(bg='#cccccc')  # Делаем кнопку визуально неактивной
+                        widget.config(disabledforeground='#999999')  # Делаем текст серым
         
         # Конвертируем текущее значение в новую систему счисления
         current = self.display.get()
         try:
-            if current and all(c.upper() in "0123456789ABCDEF"[:old_base] for c in current):
-                # Конвертируем из старой системы в десятичную
-                dec_value = int(current, old_base)
-                # Конвертируем из десятичной в новую систему
-                if base == 10:
-                    new_str = str(dec_value)
-                elif base == 16:
-                    new_str = hex(dec_value)[2:].upper()
-                elif base == 8:
-                    new_str = oct(dec_value)[2:]
-                elif base == 2:
-                    new_str = bin(dec_value)[2:]
-                else:
-                    digits = []
-                    n = dec_value
-                    while n:
-                        digits.append("0123456789ABCDEF"[n % base])
-                        n //= base
-                    new_str = ''.join(reversed(digits)) if digits else '0'
+            if current:
+                # Разбиваем выражение на части (числа и операторы)
+                parts = []
+                current_part = ""
+                for c in current:
+                    if c in "+-*/^ ":
+                        if current_part:
+                            # Удаляем префиксы систем счисления
+                            current_part = current_part.lstrip('bBxXoO')
+                            
+                            # Конвертируем число из старой системы в десятичную
+                            try:
+                                if "." in current_part:
+                                    # Для дробных чисел
+                                    integer_part, fractional_part = current_part.split(".")
+                                    dec_int = int(integer_part, old_base)
+                                    dec_frac = sum(int(d, old_base) * (old_base ** -(i+1)) 
+                                                 for i, d in enumerate(fractional_part))
+                                    dec_value = dec_int + dec_frac
+                                else:
+                                    # Для целых чисел
+                                    dec_value = int(current_part, old_base)
+                                
+                                # Конвертируем из десятичной в новую систему
+                                if base == 10:
+                                    new_str = str(dec_value)
+                                elif base == 16:
+                                    new_str = hex(int(dec_value))[2:].upper()
+                                elif base == 8:
+                                    new_str = oct(int(dec_value))[2:]
+                                elif base == 2:
+                                    new_str = bin(int(dec_value))[2:]
+                                else:
+                                    # Для других систем счисления
+                                    if dec_value.is_integer():
+                                        digits = []
+                                        n = int(dec_value)
+                                        while n:
+                                            digits.append("0123456789ABCDEF"[n % base])
+                                            n //= base
+                                        new_str = ''.join(reversed(digits)) if digits else '0'
+                                    else:
+                                        # Для дробных чисел в не-десятичных системах
+                                        # показываем в десятичной системе
+                                        new_str = str(dec_value)
+                                
+                                parts.append(new_str)
+                            except ValueError:
+                                # Если не удалось конвертировать, оставляем как есть
+                                parts.append(current_part)
+                            current_part = ""
+                        parts.append(c)
+                    else:
+                        current_part += c
+                
+                # Обрабатываем последнюю часть
+                if current_part:
+                    try:
+                        # Удаляем префиксы систем счисления
+                        current_part = current_part.lstrip('bBxXoO')
+                        
+                        if "." in current_part:
+                            integer_part, fractional_part = current_part.split(".")
+                            dec_int = int(integer_part, old_base)
+                            dec_frac = sum(int(d, old_base) * (old_base ** -(i+1)) 
+                                         for i, d in enumerate(fractional_part))
+                            dec_value = dec_int + dec_frac
+                        else:
+                            dec_value = int(current_part, old_base)
+                        
+                        if base == 10:
+                            new_str = str(dec_value)
+                        elif base == 16:
+                            new_str = hex(int(dec_value))[2:].upper()
+                        elif base == 8:
+                            new_str = oct(int(dec_value))[2:]
+                        elif base == 2:
+                            new_str = bin(int(dec_value))[2:]
+                        else:
+                            if dec_value.is_integer():
+                                digits = []
+                                n = int(dec_value)
+                                while n:
+                                    digits.append("0123456789ABCDEF"[n % base])
+                                    n //= base
+                                new_str = ''.join(reversed(digits)) if digits else '0'
+                            else:
+                                new_str = str(dec_value)
+                        
+                        parts.append(new_str)
+                    except ValueError:
+                        parts.append(current_part)
+                
+                # Собираем новое выражение
+                new_expression = ''.join(parts)
                 
                 # Обновляем отображение
                 self.display.config(state="normal")
                 self.display.delete(0, tk.END)
-                self.display.insert(0, new_str)
+                self.display.insert(0, new_expression)
                 self.display.config(state="readonly")
                 
                 # Обновляем выражение в контроллере
                 if hasattr(self.controller, "set_base"):
                     self.controller.set_base(base)
-                    self.controller.expression = new_str  # Обновляем выражение напрямую
+                    self.controller.expression = new_expression
         except Exception as e:
             print(f"Error converting number: {e}")
             pass
@@ -330,9 +429,11 @@ class CalculatorApp:
                         if base <= 2:
                             widget.config(state="disabled")
                             widget.config(bg='#cccccc')  # Делаем кнопку визуально неактивной
+                            widget.config(disabledforeground='#999999')  # Делаем текст серым
                         else:
                             widget.config(state="normal")
                             widget.config(bg='#e0e0e0')  # Возвращаем нормальный цвет
+                            widget.config(disabledforeground='black')  # Возвращаем нормальный цвет текста
                     elif text in allowed or not text.isalnum():
                         widget.config(state="normal")
                         widget.config(bg='#e0e0e0')

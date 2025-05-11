@@ -4,62 +4,65 @@ import math
 import re
 
 class TANumber(ABC):
-    """Abstract base class for all number types"""
+    """Базовый класс для всех типов чисел"""
     
     @abstractmethod
     def add(self, other):
-        """Add two numbers"""
+        """Сложение"""
         pass
     
     @abstractmethod
     def subtract(self, other):
-        """Subtract two numbers"""
+        """Вычитание"""
         pass
     
     @abstractmethod
     def multiply(self, other):
-        """Multiply two numbers"""
+        """Умножение"""
         pass
     
     @abstractmethod
     def divide(self, other):
-        """Divide two numbers"""
+        """Деление"""
         pass
     
     @abstractmethod
     def square(self):
-        """Square the number"""
+        """Квадрат"""
         pass
     
     @abstractmethod
     def inverse(self):
-        """Get the inverse of the number"""
+        """Обратное число"""
         pass
     
     @abstractmethod
     def to_string(self):
-        """Convert number to string representation"""
+        """В строку"""
         pass
     
     @abstractmethod
     def from_string(self, string):
-        """Create number from string representation"""
+        """Из строки"""
         pass
 
     @abstractmethod
     def is_zero(self) -> bool:
+        """Проверка на ноль"""
         pass
 
     @abstractmethod
     def copy(self):
+        """Копия"""
         pass
 
     @abstractmethod
     def equals(self, other) -> bool:
+        """Сравнение"""
         pass
 
 class TPNumber(TANumber):
-    """P-based number implementation"""
+    """P-числа (в разных системах счисления)"""
     
     def __init__(self, value=0, base=10):
         self.base = base
@@ -67,35 +70,35 @@ class TPNumber(TANumber):
     
     @staticmethod
     def get_allowed_digits(base):
-        """Возвращает список допустимых цифр для данной системы счисления"""
+        """Какие цифры можно использовать"""
         if base < 2 or base > 16:
-            raise ValueError("Base must be between 2 and 16")
+            raise ValueError("Основание от 2 до 16")
         return "0123456789ABCDEF"[:base]
     
     def is_valid_digit(self, digit):
-        """Проверяет, является ли символ допустимой цифрой для текущей системы счисления"""
+        """Проверка цифры"""
         return digit.upper() in self.get_allowed_digits(self.base)
     
     def add(self, other):
         if not isinstance(other, TPNumber):
-            raise TypeError("Can only add TPNumber")
+            raise TypeError("Только P-числа")
         return TPNumber(self.value + other.value, self.base)
     
     def subtract(self, other):
         if not isinstance(other, TPNumber):
-            raise TypeError("Can only subtract TPNumber")
+            raise TypeError("Только P-числа")
         return TPNumber(self.value - other.value, self.base)
     
     def multiply(self, other):
         if not isinstance(other, TPNumber):
-            raise TypeError("Can only multiply TPNumber")
+            raise TypeError("Только P-числа")
         return TPNumber(self.value * other.value, self.base)
     
     def divide(self, other):
         if not isinstance(other, TPNumber):
-            raise TypeError("Can only divide TPNumber")
+            raise TypeError("Только P-числа")
         if other.value == 0:
-            raise ValueError("Division by zero")
+            raise ValueError("На ноль делить нельзя")
         return TPNumber(self.value / other.value, self.base)
     
     def square(self):
@@ -103,12 +106,12 @@ class TPNumber(TANumber):
     
     def inverse(self):
         if self.value == 0:
-            raise ValueError("Cannot inverse zero")
+            raise ValueError("Ноль нельзя")
         return TPNumber(1 / self.value, self.base)
     
     def to_string(self):
         if self.base == 10:
-            # Убираем незначащие нули
+            # Убираем лишние нули
             if self.value == int(self.value):
                 return str(int(self.value))
             return str(self.value)
@@ -119,7 +122,7 @@ class TPNumber(TANumber):
         elif self.base == 16:
             return hex(int(self.value))[2:].upper()
         else:
-            # Для других систем счисления
+            # Для других систем
             if self.value == 0:
                 return "0"
             num = int(self.value)
@@ -131,18 +134,18 @@ class TPNumber(TANumber):
     
     def from_string(self, string):
         try:
-            # Проверяем, не является ли число комплексным
+            # Проверяем на комплексные
             if 'i' in string:
-                raise ValueError("Complex numbers are not supported in P-numbers")
+                raise ValueError("Комплексные не поддерживаются")
             
-            # Проверяем все символы на допустимость в текущей системе счисления
+            # Проверяем цифры
             for char in string:
                 if char not in self.get_allowed_digits(self.base) and char not in '.-':
-                    raise ValueError(f"Invalid digit '{char}' for base {self.base}")
+                    raise ValueError(f"Неверная цифра '{char}' для основания {self.base}")
             
             self.value = float(string)
         except ValueError as e:
-            raise ValueError(f"Invalid number format: {str(e)}")
+            raise ValueError(f"Неверный формат: {str(e)}")
 
     def is_zero(self) -> bool:
         return self.value == 0
@@ -154,31 +157,31 @@ class TPNumber(TANumber):
         return isinstance(other, TPNumber) and self.value == other.value and self.base == other.base
 
 class TFrac(TANumber):
-    """Fraction implementation"""
+    """Дроби"""
     
     def __init__(self, numerator=0, denominator=1):
         self.fraction = Fraction(numerator, denominator)
     
     def add(self, other):
         if not isinstance(other, TFrac):
-            raise TypeError("Can only add TFrac")
+            raise TypeError("Только дроби")
         return TFrac(self.fraction + other.fraction)
     
     def subtract(self, other):
         if not isinstance(other, TFrac):
-            raise TypeError("Can only subtract TFrac")
+            raise TypeError("Только дроби")
         return TFrac(self.fraction - other.fraction)
     
     def multiply(self, other):
         if not isinstance(other, TFrac):
-            raise TypeError("Can only multiply TFrac")
+            raise TypeError("Только дроби")
         return TFrac(self.fraction * other.fraction)
     
     def divide(self, other):
         if not isinstance(other, TFrac):
-            raise TypeError("Can only divide TFrac")
+            raise TypeError("Только дроби")
         if other.fraction == 0:
-            raise ValueError("Division by zero")
+            raise ValueError("На ноль делить нельзя")
         return TFrac(self.fraction / other.fraction)
     
     def square(self):
@@ -186,17 +189,29 @@ class TFrac(TANumber):
     
     def inverse(self):
         if self.fraction == 0:
-            raise ValueError("Cannot inverse zero")
-        return TFrac(1 / self.fraction)
+            raise ValueError("Ноль нельзя")
+        # Меняем местами числитель и знаменатель
+        if self.fraction.numerator < 0:
+            return TFrac(-self.fraction.denominator, abs(self.fraction.numerator))
+        else:
+            return TFrac(self.fraction.denominator, self.fraction.numerator)
     
     def to_string(self):
+        # Знак всегда в числителе
+        if self.fraction.denominator < 0:
+            return f"{-self.fraction.numerator}/{abs(self.fraction.denominator)}"
         return f"{self.fraction.numerator}/{self.fraction.denominator}"
     
     def from_string(self, string):
         try:
-            self.fraction = Fraction(string)
+            if '/' in string:
+                # Если дробь
+                self.fraction = Fraction(string)
+            else:
+                # Если целое, добавляем знаменатель 1
+                self.fraction = Fraction(int(string), 1)
         except ValueError:
-            raise ValueError("Invalid fraction format")
+            raise ValueError("Неверный формат дроби")
 
     def is_zero(self) -> bool:
         return self.fraction == 0
@@ -208,31 +223,31 @@ class TFrac(TANumber):
         return isinstance(other, TFrac) and self.fraction == other.fraction
 
 class TComp(TANumber):
-    """Complex number implementation"""
+    """Комплексные числа"""
     
     def __init__(self, real=0, imag=0):
         self.value = complex(real, imag)
     
     def add(self, other):
         if not isinstance(other, TComp):
-            raise TypeError("Can only add TComp")
+            raise TypeError("Только комплексные")
         return TComp(self.value + other.value)
     
     def subtract(self, other):
         if not isinstance(other, TComp):
-            raise TypeError("Can only subtract TComp")
+            raise TypeError("Только комплексные")
         return TComp(self.value - other.value)
     
     def multiply(self, other):
         if not isinstance(other, TComp):
-            raise TypeError("Can only multiply TComp")
+            raise TypeError("Только комплексные")
         return TComp(self.value * other.value)
     
     def divide(self, other):
         if not isinstance(other, TComp):
-            raise TypeError("Can only divide TComp")
+            raise TypeError("Только комплексные")
         if other.value == 0:
-            raise ValueError("Division by zero")
+            raise ValueError("На ноль делить нельзя")
         return TComp(self.value / other.value)
     
     def square(self):
@@ -240,20 +255,20 @@ class TComp(TANumber):
     
     def inverse(self):
         if self.value == 0:
-            raise ValueError("Cannot inverse zero")
+            raise ValueError("Ноль нельзя")
         return TComp(1 / self.value)
     
     def to_string(self):
         real = self.value.real
         imag = self.value.imag
         
-        # Форматируем вещественную часть
+        # Вещественная часть
         if real == int(real):
             real_str = f"{int(real)}" if real != 0 else ""
         else:
             real_str = f"{real}" if real != 0 else ""
             
-        # Форматируем мнимую часть
+        # Мнимая часть
         if imag == 0:
             imag_str = ""
         elif imag == 1:
@@ -271,26 +286,26 @@ class TComp(TANumber):
             else:
                 imag_str = f"{imag}i"
                 
-        # Если обе части ноль, выводим 0
+        # Если обе части ноль
         if real == 0 and imag == 0:
             return "0"
             
         result = f"{real_str}{imag_str}".replace("+-", "-")
-        # Если результат начинается с +, убираем его
+        # Убираем + в начале
         if result.startswith("+"):
             result = result[1:]
         return result
     
     def from_string(self, string):
         try:
-            # Проверяем наличие i для определения комплексного числа
+            # Проверяем на i
             if 'i' not in string:
-                raise ValueError("Not a complex number")
-            # Replace i with j for Python's complex number support
+                raise ValueError("Не комплексное число")
+            # Заменяем i на j для Python
             string = string.replace('i', 'j')
             self.value = complex(string)
         except ValueError:
-            raise ValueError("Invalid complex number format")
+            raise ValueError("Неверный формат комплексного числа")
 
     def is_zero(self) -> bool:
         return self.value == 0
