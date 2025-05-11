@@ -1,66 +1,81 @@
-# Universal Calculator
+# Калькулятор
 
-A Windows-style calculator application that supports calculations with real numbers, complex numbers, and fractions in different number systems.
+Калькулятор с поддержкой различных типов чисел и систем счисления.
 
-## Features
+## Возможности
 
-- Three calculation modes:
-  - Real Numbers
-  - Complex Numbers
-  - Fractions
-- Support for different number bases:
-  - Binary (base 2)
-  - Octal (base 8)
-  - Decimal (base 10)
-  - Hexadecimal (base 16)
-- Memory operations (M+, M-, MR)
-- Modern dark theme interface
-- Comprehensive help system
+- Три режима работы:
+  - P-числа (с поддержкой систем счисления)
+  - Дроби
+  - Комплексные числа
+- Поддержка систем счисления:
+  - Двоичная (2)
+  - Восьмеричная (8)
+  - Десятичная (10)
+  - Шестнадцатеричная (16)
+- Операции с памятью:
+  - MS (Memory Store) - сохранение в память
+  - M+ (Memory Add) - добавление к памяти
+  - M- (Memory Subtract) - вычитание из памяти
+  - MR (Memory Recall) - извлечение из памяти
+  - MC (Memory Clear) - очистка памяти
+- Современный интерфейс
 
-## Installation
+## Установка
 
-1. Make sure you have Python 3.7+ installed on your system
-2. Install the required dependencies:
+1. Убедитесь, что у вас установлен Python 3.7+
+2. Установите зависимости:
    ```bash
    pip install -r requirements.txt
    ```
 
-## Usage
+## Запуск
 
-Run the calculator:
 ```bash
-python calculator.py
+python main.py
 ```
 
-### Real Numbers Mode
-- Basic arithmetic operations (+, -, *, /)
-- Support for different number bases
-- Example: 1010 (binary) = 10 (decimal)
+### Режим P-чисел
+- Базовые арифметические операции (+, -, *, /)
+- Поддержка различных систем счисления
+- Пример: 1010 (двоичное) = 10 (десятичное)
 
-### Complex Numbers Mode
-- Use 'i' for imaginary part
-- Example: 2+3i
-- Basic arithmetic operations
+### Режим дробей
+- Используйте '/' для записи дробей
+- Пример: 1/2 + 1/3
+- Результаты отображаются в виде дробей
 
-### Fractions Mode
-- Use '/' for division
-- Example: 1/2 + 1/3
-- Results are displayed as fractions
+### Режим комплексных чисел
+- Используйте 'i' для мнимой части
+- Пример: 2+3i
+- Базовые арифметические операции
 
-### Memory Operations
-- M+: Add current value to memory
-- M-: Subtract current value from memory
-- MR: Recall memory value
+### Операции с памятью
+- MS: Сохранить текущее значение
+- M+: Добавить к памяти
+- M-: Вычесть из памяти
+- MR: Извлечь из памяти
+- MC: Очистить память
 
-### Keyboard Shortcuts
-- Enter: Calculate
-- Escape: Clear
+### Горячие клавиши
+- Enter: Вычислить
+- Escape: Очистить
 
-## Requirements
+## Требования
 
 - Python 3.7+
 - tkinter
 - customtkinter
+
+## Структура проекта
+
+- `main.py` - основной файл приложения
+- `calc_numbers/` - классы для работы с числами
+- `controllers/` - контроллеры
+- `editors/` - редакторы для разных типов чисел
+- `memory/` - работа с памятью
+- `processor/` - процессор калькулятора
+- `tests/` - тесты
 
 ## License
 
