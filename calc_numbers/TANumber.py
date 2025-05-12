@@ -190,14 +190,11 @@ class TFrac(TANumber):
     def inverse(self):
         if self.fraction == 0:
             raise ValueError("Ноль нельзя")
-        # Меняем местами числитель и знаменатель
         if self.fraction.numerator < 0:
             return TFrac(-self.fraction.denominator, abs(self.fraction.numerator))
-        else:
-            return TFrac(self.fraction.denominator, self.fraction.numerator)
+        return TFrac(self.fraction.denominator, self.fraction.numerator)
     
     def to_string(self):
-        # Знак всегда в числителе
         if self.fraction.denominator < 0:
             return f"{-self.fraction.numerator}/{abs(self.fraction.denominator)}"
         return f"{self.fraction.numerator}/{self.fraction.denominator}"
@@ -205,10 +202,8 @@ class TFrac(TANumber):
     def from_string(self, string):
         try:
             if '/' in string:
-                # Если дробь
                 self.fraction = Fraction(string)
             else:
-                # Если целое, добавляем знаменатель 1
                 self.fraction = Fraction(int(string), 1)
         except ValueError:
             raise ValueError("Неверный формат дроби")

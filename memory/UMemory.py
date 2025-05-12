@@ -21,6 +21,6 @@ class TMemory:
         """Очистить память"""
         self.value = None
         
-    def get(self):
-        """Получить число"""
+    def take(self):
+        """Получить число из памяти"""
         return self.value.copy() if self.value else None 

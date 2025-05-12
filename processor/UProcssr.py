@@ -26,20 +26,6 @@ class TProc:
         elif self.op == "Rev":
             self.lop = self.lop.inverse()
             
-    def op_run_memory(self, memory):
-        """Выполнить операцию с памятью"""
-        if not self.lop or not memory or not self.op:
-            return
-            
-        if self.op == "Add":
-            self.lop = self.lop.add(memory)
-        elif self.op == "Sub":
-            self.lop = self.lop.subtract(memory)
-        elif self.op == "Mul":
-            self.lop = self.lop.multiply(memory)
-        elif self.op == "Div":
-            self.lop = self.lop.divide(memory)
-            
     def clear(self):
         """Очистить"""
         self.lop = None
