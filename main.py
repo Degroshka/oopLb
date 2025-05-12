@@ -91,6 +91,13 @@ class CalculatorApp:
         if self.number_type.get() == "P":
             self.base_frame.grid()
             self.update_number_buttons_state(self.base_var.get())
+            # Включаем кнопку степени для P-чисел
+            for text, pos in self.operation_buttons.items():
+                if text == '^':
+                    for widget in self.main_frame.grid_slaves(row=pos[0], column=pos[1]):
+                        if isinstance(widget, ttk.Button):
+                            widget.config(state="normal")
+                            widget.configure(style='TButton')
         else:
             self.base_frame.grid_remove()
             # отключаем буквы A-F для дробей и комплексных чисел
@@ -121,12 +128,8 @@ class CalculatorApp:
                 if text == '^':
                     for widget in self.main_frame.grid_slaves(row=pos[0], column=pos[1]):
                         if isinstance(widget, ttk.Button):
-                            if self.number_type.get() in ["F", "C"]:
-                                widget.config(state="disabled")
-                                widget.configure(style='Disabled.TButton')
-                            else:
-                                widget.config(state="normal")
-                                widget.configure(style='TButton')
+                            widget.config(state="disabled")
+                            widget.configure(style='Disabled.TButton')
     
     def create_buttons(self):
         """Создание кнопок калькулятора"""
