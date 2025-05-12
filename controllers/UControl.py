@@ -432,74 +432,92 @@ class TCtrl:
                             self.expression = result
                             return result
                         except ValueError as e:
+                            if "На ноль делить нельзя" in str(e):
+                                self.expression = "0"
+                                return "0"
                             self.expression = f"Error: {str(e)}"
                             return self.expression
                     elif isinstance(self.editor, CEditor):
-                        result = self._eval_complex_expression(self.expression)
+                        try:
+                            result = self._eval_complex_expression(self.expression)
+                            self.expression = result
+                            return result
+                        except ValueError as e:
+                            if "На ноль делить нельзя" in str(e):
+                                self.expression = "0"
+                                return "0"
+                            self.expression = f"Error: {str(e)}"
+                            return self.expression
                     else:
                         # Для P-чисел конвертируем в десятичную систему для вычисления
-                        expr = self.expression
-                        if self.current_base != 10:
-                            # Разбиваем выражение на числа и операторы
-                            parts = []
-                            current = ""
-                            for c in expr:
-                                if c in "+-*/.^":
-                                    if current:
-                                        # Убираем незначащие нули и префиксы
-                                        current = current.lstrip('0bBxXoO') or '0'
-                                        try:
-                                            parts.append(str(int(current, self.current_base)))
-                                        except ValueError:
-                                            parts.append(current)
-                                        current = ""
-                                    parts.append(c)
-                                else:
-                                    current += c
-                            if current:
-                                # Убираем незначащие нули и префиксы
-                                current = current.lstrip('0bBxXoO') or '0'
-                                try:
-                                    parts.append(str(int(current, self.current_base)))
-                                except ValueError:
-                                    parts.append(current)
-                            expr = ''.join(parts)
-                        
-                        result = str(eval(expr.replace('^', '**')))
-                        
-                        # Конвертируем результат обратно в текущую систему
-                        if self.current_base != 10:
-                            try:
-                                dec_value = float(result)
-                                if dec_value.is_integer():
-                                    dec_value = int(dec_value)
-                                    if self.current_base == 16:
-                                        result = hex(dec_value)[2:].upper()
-                                    elif self.current_base == 8:
-                                        result = oct(dec_value)[2:]
-                                    elif self.current_base == 2:
-                                        result = bin(dec_value)[2:]
+                        try:
+                            expr = self.expression
+                            if self.current_base != 10:
+                                # Разбиваем выражение на числа и операторы
+                                parts = []
+                                current = ""
+                                for c in expr:
+                                    if c in "+-*/.^":
+                                        if current:
+                                            # Убираем незначащие нули и префиксы
+                                            current = current.lstrip('0bBxXoO') or '0'
+                                            try:
+                                                parts.append(str(int(current, self.current_base)))
+                                            except ValueError:
+                                                parts.append(current)
+                                            current = ""
+                                        parts.append(c)
                                     else:
-                                        digits = []
-                                        n = abs(dec_value)
-                                        while n:
-                                            digits.append("0123456789ABCDEF"[n % self.current_base])
-                                            n //= self.current_base
-                                        result = ''.join(reversed(digits)) if digits else '0'
-                                        if dec_value < 0:
-                                            result = '-' + result
-                                else:
-                                    # Для дробных чисел показываем в десятичной системе
-                                    # с ограничением количества знаков после запятой
-                                    result = f"{dec_value:.10f}".rstrip('0').rstrip('.')
-                            except ValueError:
-                                pass
-                    
-                    self.expression = result
-                    return result
+                                        current += c
+                                if current:
+                                    # Убираем незначащие нули и префиксы
+                                    current = current.lstrip('0bBxXoO') or '0'
+                                    try:
+                                        parts.append(str(int(current, self.current_base)))
+                                    except ValueError:
+                                        parts.append(current)
+                                expr = ''.join(parts)
+                            
+                            result = str(eval(expr.replace('^', '**')))
+                            
+                            # Конвертируем результат обратно в текущую систему
+                            if self.current_base != 10:
+                                try:
+                                    dec_value = float(result)
+                                    if dec_value.is_integer():
+                                        dec_value = int(dec_value)
+                                        if self.current_base == 16:
+                                            result = hex(dec_value)[2:].upper()
+                                        elif self.current_base == 8:
+                                            result = oct(dec_value)[2:]
+                                        elif self.current_base == 2:
+                                            result = bin(dec_value)[2:]
+                                        else:
+                                            digits = []
+                                            n = abs(dec_value)
+                                            while n:
+                                                digits.append("0123456789ABCDEF"[n % self.current_base])
+                                                n //= self.current_base
+                                            result = ''.join(reversed(digits)) if digits else '0'
+                                            if dec_value < 0:
+                                                result = '-' + result
+                                    else:
+                                        # Для дробных чисел показываем в десятичной системе
+                                        result = f"{dec_value:.10f}".rstrip('0').rstrip('.')
+                                except ValueError:
+                                    pass
+                            
+                            self.expression = result
+                            return result
+                        except ZeroDivisionError:
+                            self.expression = "0"
+                            return "0"
+                        except Exception as e:
+                            self.expression = "0"
+                            return "0"
                 except Exception as e:
-                    self.expression = ""
-                    return "Error"
+                    self.expression = "0"
+                    return "0"
 
             elif cmd == "MS":
                 # Запомнить текущее значение
