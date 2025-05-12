@@ -355,13 +355,19 @@ class TCtrl:
                         # Если это комплексное число
                         if isinstance(self.editor, CEditor):
                             if 'i' in last_number:
-                                # Для комплексных чисел используем TComp
-                                comp = TComp()
-                                comp.from_string(last_number)
-                                result = comp.inverse()
-                                parts[-1] = result.to_string()
-                                self.expression = " ".join(parts)
-                                return self.expression
+                                try:
+                                    # Для комплексных чисел используем TComp
+                                    comp = TComp()
+                                    comp.from_string(last_number)
+                                    result = comp.inverse()
+                                    parts[-1] = result.to_string()
+                                    self.expression = " ".join(parts)
+                                    return self.expression
+                                except ValueError as e:
+                                    if "Ноль нельзя" in str(e):
+                                        self.expression = "0"
+                                        return "0"
+                                    raise e
 
                         # Если это дробный режим и число не является дробью, преобразуем его
                         if isinstance(self.editor, FEditor):
@@ -372,52 +378,65 @@ class TCtrl:
                                 except ValueError:
                                     pass
                             
-                            # Создаем дробь и вычисляем обратное число
-                            frac = TFrac()
-                            frac.from_string(last_number)
-                            result = frac.inverse()
-                            parts[-1] = result.to_string()
-                            self.expression = " ".join(parts)
-                            return self.expression
+                            try:
+                                # Создаем дробь и вычисляем обратное число
+                                frac = TFrac()
+                                frac.from_string(last_number)
+                                result = frac.inverse()
+                                parts[-1] = result.to_string()
+                                self.expression = " ".join(parts)
+                                return self.expression
+                            except ValueError as e:
+                                if "Ноль нельзя" in str(e):
+                                    self.expression = "0"
+                                    return "0"
+                                raise e
                         else:
                             # Для обычных чисел
-                            if self.current_base != 10:
-                                dec_value = int(last_number, self.current_base)
-                            else:
-                                dec_value = float(last_number)
-                                
-                            # Проверяем на ноль
-                            if dec_value == 0:
-                                raise ValueError("Division by zero")
-                                
-                            # Вычисляем обратное число
-                            inverse_value = 1.0 / dec_value
-                            
-                            # Конвертируем результат в текущую систему счисления
-                            if self.current_base != 10:
-                                # Для целых чисел
-                                if inverse_value.is_integer():
-                                    result_str = self._convert_to_base(int(inverse_value), self.current_base)
+                            try:
+                                if self.current_base != 10:
+                                    dec_value = int(last_number, self.current_base)
                                 else:
-                                    # Для дробных чисел показываем в десятичной системе
-                                    result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
-                            else:
-                                # Для десятичной системы также ограничиваем количество знаков
-                                result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
-                            
-                            # Заменяем последнее число на результат
-                            if parts:
-                                parts[-1] = result_str
-                                self.expression = " ".join(parts)
-                            else:
-                                self.expression = result_str
+                                    dec_value = float(last_number)
+                                    
+                                # Проверяем на ноль
+                                if dec_value == 0:
+                                    self.expression = "0"
+                                    return "0"
+                                    
+                                # Вычисляем обратное число
+                                inverse_value = 1.0 / dec_value
                                 
-                    except ValueError as ve:
-                        print(f"Error calculating inverse: {ve}")
-                        self.expression = "Error: Division by zero"
+                                # Конвертируем результат в текущую систему счисления
+                                if self.current_base != 10:
+                                    # Для целых чисел
+                                    if inverse_value.is_integer():
+                                        result_str = self._convert_to_base(int(inverse_value), self.current_base)
+                                    else:
+                                        # Для дробных чисел показываем в десятичной системе
+                                        result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
+                                else:
+                                    # Для десятичной системы также ограничиваем количество знаков
+                                    result_str = f"{inverse_value:.10f}".rstrip('0').rstrip('.')
+                                
+                                # Заменяем последнее число на результат
+                                if parts:
+                                    parts[-1] = result_str
+                                    self.expression = " ".join(parts)
+                                else:
+                                    self.expression = result_str
+                            except ZeroDivisionError:
+                                self.expression = "0"
+                                return "0"
+                            except Exception as e:
+                                print(f"Error calculating inverse: {e}")
+                                self.expression = "0"
+                                return "0"
+                                
                     except Exception as e:
                         print(f"Error calculating inverse: {e}")
-                        self.expression = "Error"
+                        self.expression = "0"
+                        return "0"
                 return self.expression
 
             elif cmd == "=":
