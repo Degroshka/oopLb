@@ -29,8 +29,12 @@ class CalculatorApp:
         for i in range(4):   # 4 столбца
             self.main_frame.grid_columnconfigure(i, weight=1)
         
-        # словари с позициями кнопок
+        # Создание интерфейса, кнопок, обработка событий
         self.create_buttons()
+        self.create_memory_buttons()
+        self.create_operation_buttons()
+        self.create_number_buttons()
+        self.create_control_buttons()
         
         # кнопка справки слева
         help_btn = ttk.Button(self.main_frame, text="Справка", command=self.show_help, style='TButton')
@@ -67,12 +71,6 @@ class CalculatorApp:
         self.base_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.base_value_label = ttk.Label(self.base_frame, text="10", style='TLabel')
         self.base_value_label.pack(side=tk.LEFT, padx=5)
-
-        # создаем все кнопки
-        self.create_memory_buttons()
-        self.create_operation_buttons()
-        self.create_number_buttons()
-        self.create_control_buttons()
 
         # привязка клавиш
         self.root.bind("<Key>", self.on_key_press)

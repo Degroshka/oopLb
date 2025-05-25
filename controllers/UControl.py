@@ -172,16 +172,14 @@ class TCtrl:
 
     def command(self, cmd: str):
         try:
-            # Ввод символов в выражение
+            # Ввод цифр и букв для P-чисел
             if cmd in "0123456789ABCDEFabcdef":
                 if self.state == TCtrlState.cValDone:
                     self.expression = ""
                     self.state = TCtrlState.cEditing
-                # Убираем незначащие нули в начале числа
                 if self.expression == "0":
                     self.expression = ""
                 elif self.expression and self.expression[-1] in "+-*/^":
-                    # Если последний символ - операция, добавляем пробел после неё
                     self.expression += " "
                 self.expression += cmd.upper()
                 return self.expression
@@ -195,53 +193,14 @@ class TCtrl:
                     self.expression += cmd
                 return self.expression
 
-            # Операции
+            # Арифметические операции
             elif cmd in "+-*/^":
-                # Если это дробный режим или комплексный режим и операция степени, игнорируем
-                if (isinstance(self.editor, (FEditor, CEditor)) and cmd == "^"):
+                if isinstance(self.editor, (FEditor, CEditor)) and cmd == "^":
                     return self.expression
-
                 if self.expression:
-                    # Если это дробный режим и вводится /, проверяем, что это не операция деления
-                    if isinstance(self.editor, FEditor) and cmd == "/":
-                        # Проверяем, что последний символ не является операцией
-                        if self.expression and self.expression[-1] not in "+-*/^":
-                            self.expression += cmd
-                            return self.expression
-                    
-                    # Если это дробный режим и вводится другая операция
-                    if isinstance(self.editor, FEditor) and cmd != "/":
-                        # Проверяем последнюю операцию
-                        last_op = None
-                        for op in "+-*/^":
-                            pos = self.expression.rfind(op)
-                            if pos > -1 and (last_op is None or pos > last_op[1]):
-                                last_op = (op, pos)
-                        
-                        # Если последней операции не было или это не деление, добавляем знаменатель
-                        if last_op is None or last_op[0] != "/":
-                            # Находим последнее число
-                            if last_op is None:
-                                last_number = self.expression.strip()
-                            else:
-                                last_number = self.expression[last_op[1] + 1:].strip()
-                            
-                            # Если число не является дробью, добавляем знаменатель
-                            if '/' not in last_number:
-                                try:
-                                    num = int(last_number)
-                                    if last_op is None:
-                                        self.expression = f"{num}/1"
-                                    else:
-                                        self.expression = self.expression[:last_op[1] + 1] + f" {num}/1"
-                                except ValueError:
-                                    pass
-                    
-                    # Если последний символ - операция, заменяем её
-                    if self.expression and self.expression[-1] in "+-*/^":
+                    if self.expression[-1] in "+-*/^":
                         self.expression = self.expression[:-1] + cmd
                     else:
-                        # Добавляем пробел перед операцией
                         if not self.expression.endswith(" "):
                             self.expression += " "
                         self.expression += cmd

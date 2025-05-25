@@ -24,81 +24,53 @@ class TProc:
         self._error = ""  # Сообщение об ошибке
         
     @property
-    def lop(self) -> TANumber:
-        """Читать левый операнд"""
-        return self._lop.copy() if self._lop else None
-        
-    @lop.setter 
-    def lop(self, value: TANumber):
-        """Записать левый операнд"""
-        self._lop = value.copy() if value else None
+    def lop(self):
+        return self._lop
+
+    @lop.setter
+    def lop(self, value):
+        self._lop = value
         
     @property
-    def right(self) -> TANumber:
-        """Читать правый операнд"""
-        return self._rop.copy() if self._rop else None
+    def right(self):
+        return self._rop
         
     @right.setter
-    def right(self, value: TANumber):
-        """Записать правый операнд"""
-        self._rop = value.copy() if value else None
+    def right(self, value):
+        self._rop = value
         
     @property
-    def op(self) -> TOprtn:
-        """Читать состояние"""
+    def op(self):
         return self._operation
         
     @op.setter
-    def op(self, value: TOprtn):
-        """Записать состояние"""
+    def op(self, value):
         self._operation = value
         
     @property
-    def error(self) -> str:
-        """Читать ошибку"""
+    def error(self):
         return self._error
         
     def clear_error(self):
-        """Сброс ошибки"""
         self._error = ""
         
     def op_run(self):
-        """Выполнить операцию"""
-        try:
-            if not self._lop or not self._rop:
-                raise ValueError("Операнды не установлены")
-                
-            if self._operation == TOprtn.None_:
-                raise ValueError("Операция не установлена")
-                
-            if self._operation == TOprtn.Add:
-                self._rop = self._lop.add(self._rop)
-            elif self._operation == TOprtn.Sub:
-                self._rop = self._lop.subtract(self._rop)
-            elif self._operation == TOprtn.Mul:
-                self._rop = self._lop.multiply(self._rop)
-            elif self._operation == TOprtn.Dvd:
-                self._rop = self._lop.divide(self._rop)
-                
-        except Exception as e:
-            self._error = str(e)
+        if self._operation == TOprtn.Add:
+            self._lop = self._lop.add(self._rop)
+        elif self._operation == TOprtn.Sub:
+            self._lop = self._lop.subtract(self._rop)
+        elif self._operation == TOprtn.Mul:
+            self._lop = self._lop.multiply(self._rop)
+        elif self._operation == TOprtn.Dvd:
+            self._lop = self._lop.divide(self._rop)
             
-    def func_run(self, func: TFunc):
-        """Выполнить функцию"""
-        try:
-            if not self._rop:
-                raise ValueError("Операнд не установлен")
-                
-            if func == TFunc.Rev:
-                self._rop = self._rop.inverse()
-            elif func == TFunc.Sqr:
-                self._rop = self._rop.square()
-                
-        except Exception as e:
-            self._error = str(e)
+    def func_run(self, func):
+        if func == TFunc.Rev:
+            self._rop = self._rop.inverse()
+        elif func == TFunc.Sqr:
+            self._rop = self._rop.square()
             
     def reset(self):
-        """Установить начальное состояние"""
         self._lop = None
         self._rop = None
         self._operation = TOprtn.None_
