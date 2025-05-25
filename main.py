@@ -5,7 +5,7 @@ from controllers.UControl import TCtrl
 class CalculatorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Universal Calculator")
+        self.root.title("Calculator")
         self.controller = TCtrl()
         
         # мин. размер окна

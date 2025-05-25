@@ -3,6 +3,7 @@ from editors.UAEditor import PEditor, FEditor, CEditor, AEditor
 from processor.UProcssr import TProc
 from memory.UMemory import TMemory
 from calc_numbers.TANumber import TANumber, TPNumber, TFrac, TComp
+import re
 
 class TCtrlState(Enum):
     cStart = 0
@@ -472,31 +473,24 @@ class TCtrl:
                         try:
                             expr = self.expression
                             if self.current_base != 10:
-                                # Разбиваем выражение на числа и операторы
-                                parts = []
-                                current = ""
-                                for c in expr:
-                                    if c in "+-*/.^":
-                                        if current:
-                                            # Убираем незначащие нули и префиксы
-                                            current = current.lstrip('0bBxXoO') or '0'
-                                            try:
-                                                parts.append(str(int(current, self.current_base)))
-                                            except ValueError:
-                                                parts.append(current)
-                                            current = ""
-                                        parts.append(c)
+                                # Используем регулярное выражение для поиска всех чисел (целых и дробных)
+                                # Например, для 16-ричной: r'[A-F0-9]+(\.[A-F0-9]+)?'
+                                pattern = r'[A-F0-9]+(\.[A-F0-9]+)?'
+                                # Заменяем все числа на их десятичные значения
+                                def repl(match):
+                                    num_str = match.group(0)
+                                    if '.' in num_str:
+                                        int_part, frac_part = num_str.split('.')
+                                        int_val = int(int_part, self.current_base) if int_part else 0
+                                        frac_val = 0.0
+                                        for i, ch in enumerate(frac_part):
+                                            digit = int(ch, self.current_base)
+                                            frac_val += digit / (self.current_base ** (i + 1))
+                                        value = int_val + frac_val
                                     else:
-                                        current += c
-                                if current:
-                                    # Убираем незначащие нули и префиксы
-                                    current = current.lstrip('0bBxXoO') or '0'
-                                    try:
-                                        parts.append(str(int(current, self.current_base)))
-                                    except ValueError:
-                                        parts.append(current)
-                                expr = ''.join(parts)
-                            
+                                        value = int(num_str, self.current_base)
+                                    return str(value)
+                                expr = re.sub(pattern, repl, expr, flags=re.IGNORECASE)
                             result = str(eval(expr.replace('^', '**')))
                             
                             # Конвертируем результат обратно в текущую систему
@@ -521,11 +515,37 @@ class TCtrl:
                                             if dec_value < 0:
                                                 result = '-' + result
                                     else:
-                                        # Для дробных чисел показываем в десятичной системе
-                                        result = f"{dec_value:.10f}".rstrip('0').rstrip('.')
+                                        # Для дробных чисел конвертируем и дробную часть
+                                        int_part = int(dec_value)
+                                        frac_part = abs(dec_value - int_part)
+                                        # Конвертация целой части
+                                        if self.current_base == 16:
+                                            int_str = hex(abs(int_part))[2:].upper()
+                                        elif self.current_base == 8:
+                                            int_str = oct(abs(int_part))[2:]
+                                        elif self.current_base == 2:
+                                            int_str = bin(abs(int_part))[2:]
+                                        else:
+                                            digits = []
+                                            n = abs(int_part)
+                                            while n:
+                                                digits.append("0123456789ABCDEF"[n % self.current_base])
+                                                n //= self.current_base
+                                            int_str = ''.join(reversed(digits)) if digits else '0'
+                                        # Конвертация дробной части
+                                        frac_str = ''
+                                        max_digits = 8
+                                        f = frac_part
+                                        for _ in range(max_digits):
+                                            f *= self.current_base
+                                            digit = int(f)
+                                            frac_str += "0123456789ABCDEF"[digit]
+                                            f -= digit
+                                            if f == 0:
+                                                break
+                                        result = (('-' if dec_value < 0 else '') + int_str + '.' + frac_str).rstrip('.')
                                 except ValueError:
                                     pass
-                            
                             self.expression = result
                             return result
                         except ZeroDivisionError:
@@ -542,11 +562,8 @@ class TCtrl:
                 # Запомнить текущее значение
                 if self.expression:
                     try:
-                        # Получаем последнее число из выражения
                         parts = self.expression.split()
                         last_number = parts[-1] if parts else "0"
-                        
-                        # Создаем число соответствующего типа
                         if isinstance(self.editor, FEditor):
                             number = TFrac()
                             number.from_string(last_number)
@@ -559,8 +576,7 @@ class TCtrl:
                                 dec_value = int(last_number, self.current_base)
                             else:
                                 dec_value = float(last_number)
-                            number = TPNumber(dec_value)
-                            
+                            number = TPNumber(dec_value, self.current_base)
                         self.memory.store(number)
                     except Exception as e:
                         print(f"Error storing in memory: {e}")
@@ -571,18 +587,12 @@ class TCtrl:
                 try:
                     mem_val = self.memory.value
                     if mem_val:
-                        # Получаем строковое представление числа
                         if isinstance(mem_val, TPNumber):
-                            if self.current_base != 10:
-                                # Для не-десятичных систем конвертируем в текущую систему
-                                new_str = self._convert_to_base(int(mem_val.value), self.current_base)
-                            else:
-                                # Для десятичной системы показываем как есть
-                                new_str = str(mem_val.value)
-                        else:
-                            # Для дробей и комплексных чисел используем их метод to_string
+                            # Пересоздаём TPNumber с текущей базой
+                            mem_val = TPNumber(mem_val.value, self.current_base)
                             new_str = mem_val.to_string()
-                            
+                        else:
+                            new_str = mem_val.to_string()
                         if self.expression and self.expression[-1] in "+-*/^":
                             self.expression += " " + new_str
                         else:
@@ -599,11 +609,8 @@ class TCtrl:
                 # Добавить к значению в памяти
                 if self.expression:
                     try:
-                        # Получаем последнее число из выражения
                         parts = self.expression.split()
                         last_number = parts[-1] if parts else "0"
-                        
-                        # Создаем число соответствующего типа
                         if isinstance(self.editor, FEditor):
                             number = TFrac()
                             number.from_string(last_number)
@@ -616,8 +623,7 @@ class TCtrl:
                                 dec_value = int(last_number, self.current_base)
                             else:
                                 dec_value = float(last_number)
-                            number = TPNumber(dec_value)
-                            
+                            number = TPNumber(dec_value, self.current_base)
                         self.memory.add(number)
                     except Exception as e:
                         print(f"Error adding to memory: {e}")
