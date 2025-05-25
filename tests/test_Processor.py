@@ -1,29 +1,34 @@
-from processor.UProcssr import TProc
+import unittest
+from processor.UProcssr import TProc, TOprtn
 from calc_numbers.TANumber import TPNumber, TFrac, TComp
 
-def test_processor():
-    # Тестирование с P-числами
-    proc = TProc()
-    proc.lop = TPNumber(5)
-    proc.right = TPNumber(3)
-    proc.op = "Add"
-    proc.op_run()
-    assert proc.lop.value == 8
+class TestProcessor(unittest.TestCase):
+    def test_pnumber_operations(self):
+        # Тестирование с P-числами
+        proc = TProc()
+        proc.lop = TPNumber(5)
+        proc.right = TPNumber(3)
+        proc.op = TOprtn.Add
+        proc.op_run()
+        self.assertEqual(proc.right.value, 8)
 
-    # Тестирование с дробями
-    proc.lop = TFrac(1, 2)
-    proc.right = TFrac(1, 3)
-    proc.op = "Add"
-    proc.op_run()
-    assert proc.lop.to_string() == "5/6"
+    def test_fraction_operations(self):
+        # Тестирование с дробями
+        proc = TProc()
+        proc.lop = TFrac(1, 2)
+        proc.right = TFrac(1, 3)
+        proc.op = TOprtn.Add
+        proc.op_run()
+        self.assertEqual(proc.right.to_string(), "5/6")
 
-    # Тестирование с комплексными числами
-    proc.lop = TComp(1, 2)
-    proc.right = TComp(3, 4)
-    proc.op = "Add"
-    proc.op_run()
-    assert proc.lop.to_string() == "4+6i"
+    def test_complex_operations(self):
+        # Тестирование с комплексными числами
+        proc = TProc()
+        proc.lop = TComp(1, 2)
+        proc.right = TComp(3, 4)
+        proc.op = TOprtn.Add
+        proc.op_run()
+        self.assertEqual(proc.right.to_string(), "4+6i")
 
-if __name__ == "__main__":
-    test_processor()
-    print("All processor tests passed!") 
+if __name__ == '__main__':
+    unittest.main() 

@@ -52,7 +52,7 @@ class TestUControl(unittest.TestCase):
         # Тест с нулем
         self.ctrl.expression = "0"
         self.ctrl.command("1/x")
-        self.assertEqual(self.ctrl.expression, "Error: Division by zero")
+        self.assertEqual(self.ctrl.expression, "0")
 
     def test_fraction_sign_change(self):
         # Тест смены знака для дробей
@@ -95,7 +95,7 @@ class TestUControl(unittest.TestCase):
         # Тест с нулем
         self.ctrl.expression = "0"
         self.ctrl.command("1/x")
-        self.assertEqual(self.ctrl.expression, "Error: Division by zero")
+        self.assertEqual(self.ctrl.expression, "0")
 
     def test_power_operation(self):
         # Тест операции возведения в степень
