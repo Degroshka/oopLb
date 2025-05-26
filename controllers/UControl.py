@@ -172,7 +172,7 @@ class TCtrl:
 
     def command(self, cmd: str):
         try:
-            # Ввод цифр и букв для P-чисел
+            # Проверка ввода цифр и букв для P-чисел
             if cmd in "0123456789ABCDEFabcdef":
                 if self.state == TCtrlState.cValDone:
                     self.expression = ""
@@ -184,7 +184,7 @@ class TCtrl:
                 self.expression += cmd.upper()
                 return self.expression
 
-            # Точка доступна только в системах счисления с основанием больше 2
+            # Проверка точки для систем счисления > 2
             elif cmd == "." and self.current_base > 2:
                 if self.state == TCtrlState.cValDone:
                     self.expression = ""
@@ -193,7 +193,7 @@ class TCtrl:
                     self.expression += cmd
                 return self.expression
 
-            # Арифметические операции
+            # Проверка арифметических операций
             elif cmd in "+-*/^":
                 if isinstance(self.editor, (FEditor, CEditor)) and cmd == "^":
                     return self.expression
