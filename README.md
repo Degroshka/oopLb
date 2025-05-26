@@ -99,6 +99,3 @@ python build.py
 - tkinter (встроен в Python)
 - customtkinter==5.2.1
 - pyinstaller (для сборки)
-
-## Лицензия
-MIT 
