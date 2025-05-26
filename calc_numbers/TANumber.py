@@ -27,11 +27,6 @@ class TANumber(ABC):
         pass
     
     @abstractmethod
-    def square(self):
-        """Квадрат"""
-        pass
-    
-    @abstractmethod
     def inverse(self):
         """Обратное число"""
         pass
@@ -100,9 +95,6 @@ class TPNumber(TANumber):
         if other.value == 0:
             raise ValueError("На ноль делить нельзя")
         return TPNumber(self.value / other.value, self.base)
-    
-    def square(self):
-        return TPNumber(self.value ** 2, self.base)
     
     def inverse(self):
         if self.value == 0:
@@ -184,9 +176,6 @@ class TFrac(TANumber):
             raise ValueError("На ноль делить нельзя")
         return TFrac(self.fraction / other.fraction)
     
-    def square(self):
-        return TFrac(self.fraction ** 2)
-    
     def inverse(self):
         if self.fraction == 0:
             raise ValueError("Ноль нельзя")
@@ -244,9 +233,6 @@ class TComp(TANumber):
         if other.value == 0:
             raise ValueError("На ноль делить нельзя")
         return TComp(self.value / other.value)
-    
-    def square(self):
-        return TComp(self.value ** 2)
     
     def inverse(self):
         if self.value == 0:

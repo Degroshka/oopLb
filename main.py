@@ -31,10 +31,6 @@ class CalculatorApp:
         
         # Создание интерфейса, кнопок, обработка событий
         self.create_buttons()
-        self.create_memory_buttons()
-        self.create_operation_buttons()
-        self.create_number_buttons()
-        self.create_control_buttons()
         
         # кнопка справки слева
         help_btn = ttk.Button(self.main_frame, text="Справка", command=self.show_help, style='TButton')
@@ -79,6 +75,12 @@ class CalculatorApp:
         # инициализация нач. состояния
         self.update_number_buttons_state(10)
         self.base_frame.grid()
+        
+        # Создание остальных кнопок после инициализации number_type
+        self.create_memory_buttons()
+        self.create_operation_buttons()
+        self.create_number_buttons()
+        self.create_control_buttons()
     
     def on_number_type_change(self):
         """Обработка изменения типа числа"""
@@ -222,36 +224,6 @@ class CalculatorApp:
 
             # если это операция или равно
             if command in "+-*/^=" or command == "1/x":
-                # для операции степени в режиме P-чисел
-                if command == "^" and self.number_type.get() == "P":
-                    # получаем текущее выражение
-                    expr = self.display.get()
-                    if expr:
-                        try:
-                            # разбиваем на число и степень
-                            parts = expr.split("^")
-                            if len(parts) == 2:
-                                base = float(parts[0])
-                                power = float(parts[1])
-                                result = base ** power
-                                # конвертируем результат в текущую систему счисления
-                                if self.base_var.get() != 10:
-                                    if result.is_integer():
-                                        result = int(result)
-                                        result_str = self._convert_to_base(result, self.base_var.get())
-                                    else:
-                                        # для дробных чисел показываем в десятичной системе
-                                        result_str = f"{result:.10f}".rstrip('0').rstrip('.')
-                                else:
-                                    result_str = f"{result:.10f}".rstrip('0').rstrip('.')
-                                self.display.config(state="normal")
-                                self.display.delete(0, tk.END)
-                                self.display.insert(0, result_str)
-                                self.display.config(state="readonly")
-                                return
-                        except Exception as e:
-                            print(f"Ошибка вычисления степени: {e}")
-                
                 self.controller.command(command)
                 self.update_display()
                 return

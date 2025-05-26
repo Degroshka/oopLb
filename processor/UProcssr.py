@@ -17,9 +17,9 @@ class TFunc(Enum):
 class TProc:
     """Процессор калькулятора"""
     
-    def __init__(self):
-        self._lop = None  # Левое число
-        self._rop = None  # Правое число
+    def __init__(self, lop: TANumber = None, rop: TANumber = None):
+        self._lop = lop
+        self._rop = rop
         self._operation = TOprtn.None_  # Текущая операция
         self._error = ""  # Сообщение об ошибке
         
@@ -68,7 +68,7 @@ class TProc:
         if func == TFunc.Rev:
             self._rop = self._rop.inverse()
         elif func == TFunc.Sqr:
-            self._rop = self._rop.square()
+            self._rop = self._rop.multiply(self._rop)
             
     def reset(self):
         self._lop = None
